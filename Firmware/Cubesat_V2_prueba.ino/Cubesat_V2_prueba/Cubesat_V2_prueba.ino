@@ -50,7 +50,7 @@ float LED1;
 float LED2;
 float LED3;
 float PresionNivelMar = 1013.25;                   //presion sobre el nivel del mar en mbar
-
+bool sensors_status[4]={0}                         // 0 no se configuró correctamente , 1 se configuró correctamente|0,
 //~~~~~~~~~~~~~~~~~~~Prototipado de Funciones~~~~~~~~~~~~~~~~~~~~~
 void configureSensorTSL2561(void);
 void AdqTSL2561();
@@ -165,7 +165,6 @@ void AdqTSL2561(){
 
 }
 void configBmp180(){
-  
     if (bmp180.begin()){
       Serial.println("BMP180 iniciado");
     } else  {
@@ -176,11 +175,9 @@ void configBmp180(){
 void AdqBmp180(){
   char status;
   double T,P,A;
-  //double T, P, A;
   status = bmp180.startTemperature(); //Inicio de lectura de temperatura
   if (status != 0)
   {   
-    
     delay(status); //Pausa para que finalice la lectura
     status = bmp180.getTemperature(T); //Obtener la temperatura
     if (status != 0)
@@ -228,27 +225,16 @@ void configIMU(){
 void AdqImu(){
    if ( imu.dataReady() )  {
     imu.update(UPDATE_ACCEL | UPDATE_GYRO | UPDATE_COMPASS);
-    //float accelX 
     IMU[0]= imu.calcAccel(imu.ax);
-    //float accelY 
     IMU[1]= imu.calcAccel(imu.ay);
-    //float accelZ 
     IMU[2]= imu.calcAccel(imu.az);
-    //float gyroX
     IMU[3]= imu.calcGyro(imu.gx)/57.3;
-    //float gyroY 
     IMU[4]= imu.calcGyro(imu.gy)/57.3;
-    //float gyroZ
     IMU[5]= imu.calcGyro(imu.gz)/57.3;
-    //float magX 
     IMU[6] = imu.calcMag(imu.mx);
-    //float magY 
     IMU[7] = imu.calcMag(imu.my);
-    //float magZ
     IMU[8] = imu.calcMag(imu.mz);
-
-  }
-    
+  }  
 }
 void configSerie(){
   Serial.begin(9600);
@@ -307,8 +293,6 @@ void LEDs(){
   sensors_event_t event;
   tsl.getEvent(&event);
   LED3 = event.light;
-
-
    status = bmp180.startTemperature(); //Inicio de lectura de temperatura
    delay(status);
    status = bmp180.getTemperature(t); //Obtener la temperatura
