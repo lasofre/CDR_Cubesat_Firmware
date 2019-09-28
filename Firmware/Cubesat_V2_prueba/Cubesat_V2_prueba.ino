@@ -50,7 +50,7 @@ float LED1;
 float LED2;
 float LED3;
 float PresionNivelMar = 1013.25;                   //presion sobre el nivel del mar en mbar
-bool sensors_status[4]={0}                         // 0 no se configuró correctamente , 1 se configuró correctamente|0,
+bool sensors_status[4]={0};                         // 0 no se configuró correctamente , 1 se configuró correctamente|0:TSL2561|1:Bmp180()
 //~~~~~~~~~~~~~~~~~~~Prototipado de Funciones~~~~~~~~~~~~~~~~~~~~~
 void configureSensorTSL2561(void);
 void AdqTSL2561();
@@ -101,8 +101,7 @@ delay(200);
   
 }
 void loop() {  
- AdqBmp180();
- 
+ AdqBmp180(); 
  LEDs();
   // SI SE RECIBE UN COMANDO... 
   if ( radio.available()) {
@@ -116,17 +115,19 @@ void loop() {
           AdqImu();        
           AdqBmp180();
           AdqTSL2561();
-         
           escribirDato(StatusAdq);
         }else if (data == ComandoLink){                            
           escribirDato(StatusCom);                    
         }else if (data == ComandoWrite){                  
           escribirDato(StatusWrite);                  
-        }else if (data == ComandoIMU){         
+        }else if (data == ComandoIMU){
+          AdqImu();          
           escribirVectorIMU();
-        }else if (data == ComandoBmp180){         
+        }else if (data == ComandoBmp180){
+          AdqBmp180();      
           escribirVectorBpm180();
-        }else if (data == ComandoTSL2561){         
+        }else if (data == ComandoTSL2561){
+          AdqTSL2561();         
           escribirTSL2561();
           //Serial.println("IluminaciÓn: " + String(TSL2561) + " Lux");
         }else{
@@ -149,24 +150,27 @@ void configureSensorTSL2561(void) {
   if(!tsl.begin())
   {
     Serial.print("no TSL2561 detected!");
-    while(1);
   }
- 
-  tsl.enableAutoRange(true);            /* Auto-gain ... switches automatically between 1x and 16x */
-  tsl.setIntegrationTime(TSL2561_INTEGRATIONTIME_13MS);      /* fast but low resolution */
+  else{
+    sensors_status[0]=1;
+    tsl.enableAutoRange(true);            /* Auto-gain ... switches automatically between 1x and 16x */
+    tsl.setIntegrationTime(TSL2561_INTEGRATIONTIME_13MS);      /* fast but low resolution */
+  }
+
 }
 void AdqTSL2561(){
-   /* Get a new sensor event */ 
-  sensors_event_t event;
+  if(sensors_status[0]==1){
+  
+  sensors_event_t event; /*Obtener un nuevo evento de sensor */ 
   tsl.getEvent(&event);
- 
-  /* Display the results (light is measured in lux) */
-  TSL2561 = event.light;
+  TSL2561 = event.light;/*Muestra el resultado de la luz meduda en lux*/
+  }
 
 }
 void configBmp180(){
     if (bmp180.begin()){
       Serial.println("BMP180 iniciado");
+      sensors_status[1]==1;
     } else  {
       Serial.println("Error al iniciar el BMP180");
       while(1);
