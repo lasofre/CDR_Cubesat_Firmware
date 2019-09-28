@@ -50,7 +50,8 @@ float LED1;
 float LED2;
 float LED3;
 float PresionNivelMar = 1013.25;                   //presion sobre el nivel del mar en mbar
-bool sensors_status[4]={0};                         // 0 no se configuró correctamente , 1 se configuró correctamente|0:TSL2561|1:Bmp180()
+bool sensors_status[3]={0};                         // 0 no se configuró correctamente , 1 se configuró correctamente
+                                                    //Vector sensors_status|0:TSL2561|1:Bmp180|2:MPU-9250
 //~~~~~~~~~~~~~~~~~~~Prototipado de Funciones~~~~~~~~~~~~~~~~~~~~~
 void configureSensorTSL2561(void);
 void AdqTSL2561();
@@ -149,9 +150,10 @@ void configureSensorTSL2561(void) {
    /* Initialise the sensor */
   if(!tsl.begin())
   {
-    Serial.print("no TSL2561 detected!");
+    Serial.print("**TSL2561 no detectado");
   }
   else{
+    Serial.println(">TSL2561 iniciado");
     sensors_status[0]=1;
     tsl.enableAutoRange(true);            /* Auto-gain ... switches automatically between 1x and 16x */
     tsl.setIntegrationTime(TSL2561_INTEGRATIONTIME_13MS);      /* fast but low resolution */
@@ -169,11 +171,10 @@ void AdqTSL2561(){
 }
 void configBmp180(){
     if (bmp180.begin()){
-      Serial.println("BMP180 iniciado");
+      Serial.println(">BMP180 iniciado");
       sensors_status[1]==1;
     } else  {
-      Serial.println("Error al iniciar el BMP180");
-      while(1);
+      Serial.println("**Error al iniciar el BMP180");
     }
 }
 void AdqBmp180(){
@@ -208,24 +209,21 @@ void escribirVectorBpm180(){
 }
 void configIMU(){
   if (imu.begin() != INV_SUCCESS)  {
-      while (1)
-      {
-           Serial.println("Unable to communicate with MPU-9250");
-           Serial.println("Check connections, and try again.");
-           Serial.println();
-        delay(3000);
-      }
+           Serial.println("**Comunicacion con MPU-9250 desabilitada");
+           delay(100);
   } 
-  
+  else{
+  sensors_status[2]==1;
+  Serial.println(">MPU-9250 iniciado");
   imu.setSensors(INV_XYZ_GYRO | INV_XYZ_ACCEL | INV_XYZ_COMPASS);
- 
   imu.setGyroFSR(250); // Set gyro to 2000 dps
   // Accel options are +/- 2, 4, 8, or 16 g
   imu.setAccelFSR(2); // Set accel to +/-2g
   imu.setLPF(10); // Set LPF corner frequency to 5Hz
   imu.setSampleRate(10); // Set sample rate to 10Hz
   imu.setCompassSampleRate(50); // Set mag rate to 10Hz
-}
+  }
+  }
 void AdqImu(){
    if ( imu.dataReady() )  {
     imu.update(UPDATE_ACCEL | UPDATE_GYRO | UPDATE_COMPASS);
@@ -245,7 +243,6 @@ void configSerie(){
   Serial.println("--CorEsat--"); 
 }
 void configRadio(){
-  // Initiate the radio object
   radio.begin();
   // Set the transmit power to lowest available to prevent power supply related issues
   radio.setPALevel(RF24_PA_MIN);
@@ -256,15 +253,12 @@ void configRadio(){
   // Open a writing and reading pipe on each radio, with opposite addresses
   radio.openWritingPipe(addresses[0]);
   radio.openReadingPipe(1, addresses[1]);
-  // Start the radio listening for data
   radio.startListening();
 }
 int leerDato(){
-  // Go and read the data and put it into that variable
   int rx;
     while (radio.available()) {
-      //radio.read( &data, sizeof(char));
-      radio.read( &rx, sizeof(int));
+      radio.read( &rx, sizeof(int));//Lee y lo guarda en una variabe
     }
   return rx;
 }
@@ -314,4 +308,7 @@ void LEDs(){
     digitalWrite(LED_EPS, LOW);}
     
   
+}
+void escribirEstadodesensores(){
+  radio.write(&sensors_status, sizeof(sensors_status)); 
 }
