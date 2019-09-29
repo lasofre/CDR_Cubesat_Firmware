@@ -1,4 +1,4 @@
-/*Proyecto: 
+/*Proyecto: CorEsat
  * 
  */
 #include <SFE_BMP180.h>
@@ -10,28 +10,25 @@
 #include "Arduino.h"
 #include <SPI.h>
 #include <RF24.h>
-
 /*Definimos los pines para los leds testigos*/
 #define LEDTX 4      
 #define LED_Temp 3
 #define LED_EPS 2
 #define LED_NN 5
-
 //Declaración de los pines de comunicaciones de los modulos
 #define CE_PIN 7                                     //Definicion del pin CE para el RF24
 #define CSN_PIN 8                                    //Definicion del pin CSN para el RF24
-
 //Comandos
-#define ComandoLink    'C'
-#define ComandoAdq     'A'
-#define ComandoWrite   'W'
-#define ComandoIMU     'I'                          //pedir vector IMU
-#define ComandoBmp180  'P'                          //pedir Vector bmp180
-#define ComandoTSL2561 'T'                          //pedir Valor  TSL2561
+#define ComandoLink    'c'
+#define ComandoStatus  's'
+#define ComandoWrite   'w'
+#define ComandoIMU     'i'                          //pedir vector IMU
+#define ComandoBmp180  'p'                          //pedir Vector bmp180
+#define ComandoTSL2561 't'                          //pedir Valor  TSL2561
 #define ComandoNull    '0'
-#define StatusCom     'L'
-#define StatusWrite   'R'
-#define StatusAdq     'F'
+#define StatusCom     'l'
+#define StatusWrite   'r'
+#define StatusAdq     'f'
 
 
 //~~~~~~~~~~~~~~~~~~~Inicializacion de modulos~~~~~~~~~~~~~~~~~~~~~
@@ -39,39 +36,43 @@ Adafruit_TSL2561_Unified tsl = Adafruit_TSL2561_Unified(TSL2561_ADDR_FLOAT, 1234
 MPU9250_DMP imu;                                    //SDA - Pin A4 SCL - Pin A5
 RF24 radio(CE_PIN, CSN_PIN);                        // Hardware configuration: Set up nRF24L01 radio on SPI bus (pins 10, 11, 12, 13) plus pins 7 & 8
 SFE_BMP180 bmp180; 
-
 //~~~~~~~~~~~~~~~~~~~Variables Globales~~~~~~~~~~~~~~~~~~~~~
-
 byte addresses[][6] = {"1Node","2Node"};
-double IMU[9];                                     //vector para imu
-double VectorBmp180[3];                            //0-T 1-P 2-A (vector para BMP180)
-double TSL2561;                                    //valor lux
+double IMU[9]={0};                                     //vector para imu
+double VectorBmp180[3]={0};                            //0-T 1-P 2-A (vector para BMP180)
+double TSL2561=0;                                    //valor lux
 float LED1;
 float LED2;
 float LED3;
 float PresionNivelMar = 1013.25;                   //presion sobre el nivel del mar en mbar
+
 bool sensors_status[3]={0};                         // 0 no se configuró correctamente , 1 se configuró correctamente
                                                     //Vector sensors_status|0:TSL2561|1:Bmp180|2:MPU-9250
 //~~~~~~~~~~~~~~~~~~~Prototipado de Funciones~~~~~~~~~~~~~~~~~~~~~
-void configureSensorTSL2561(void);
-void AdqTSL2561();
-void configBmp180();
-void AdqBmp180();
-void escribirVectorBpm180();
-void configIMU();
-void AdqImu();
-void configSerie();                               //Confoguracion del puerto serie
-void configRadio();                             
-int leerDato();
-void detenerEscucha();
-void comenzarEscucha();
-void escribirDato(int16_t dato);
-void escribirVectorIMU();
-void escribirTSL2561();
-void LEDs();
-
+void configureSensorTSL2561(void);                //Configura el sensor de luz.
+void configSerie();                               //Configura del puerto serie.
+void configRadio();                               //Configura la comunicacion por radio.
+void configBmp180();                              //Configura el sensor de Presion.
+void configIMU();                                 //Configura el Ascelerometro, magnetometro y giroscopio.
+void AdqBmp180();                                 //Adquisicion del sensor de Presion.
+void AdqTSL2561();                                //Adquisicion del sensor de luz.
+void AdqImu();                                    //Adquisicion del Ascelerometro, magnetometro y giroscopio .
+void comenzarEscucha();                           //Iniciar escucha de la radio (Ejecutar las tres funciones en secuencia).
+int leerDato();                                   //Leer dato que le está llegando a la radio.
+void detenerEscucha();                            //Detener escucha de la radio.
+void escribirDato(int16_t dato);                  //Transmitir dato.
+void escribirVectorIMU();                         //Transmitir IMU.
+void escribirTSL2561();                           //Transmitir datos del sensor de luz.
+void escribirVectorBpm180();                      //Transmitir datos del sensor de presion.
+void escribirEstadodesensores();                  //Transmitir el estado de los sensores.
+void LEDs();                                      //Manejar estado de los leds.
 
 //~~~~~~~~~~~~~~~~~~~Funciones Propias de Arduino~~~~~~~~~~~~~~~~~~~~~
+
+
+
+
+
 void setup() {  
   
 pinMode(LEDTX,OUTPUT);  // led de transmision
@@ -107,34 +108,17 @@ void loop() {
   // SI SE RECIBE UN COMANDO... 
   if ( radio.available()) {
      digitalWrite(LEDTX,HIGH); //ENCIENDE LED CADA VEZ QUE SE ENVIA UN DATO O SE RECIBE UN COMANDO.
-
     int data=0;
     data = leerDato(); // 
     detenerEscucha();
-              
-       if(data == ComandoAdq){  
-          AdqImu();        
-          AdqBmp180();
-          AdqTSL2561();
-          escribirDato(StatusAdq);
-        }else if (data == ComandoLink){                            
-          escribirDato(StatusCom);                    
-        }else if (data == ComandoWrite){                  
-          escribirDato(StatusWrite);                  
-        }else if (data == ComandoIMU){
-          AdqImu();          
-          escribirVectorIMU();
-        }else if (data == ComandoBmp180){
-          AdqBmp180();      
-          escribirVectorBpm180();
-        }else if (data == ComandoTSL2561){
-          AdqTSL2561();         
-          escribirTSL2561();
-          //Serial.println("IluminaciÓn: " + String(TSL2561) + " Lux");
-        }else{
-          Serial.println("Comando erroneo! ");
-        } 
-                      
+        switch(data){
+          case ComandoStatus: escribirEstadodesensores();break;
+          case ComandoLink:   escribirDato(StatusCom);break;
+          case ComandoIMU:    AdqImu();escribirVectorIMU();break;
+          case ComandoBmp180: AdqBmp180();escribirVectorBpm180();break;
+          case ComandoTSL2561:AdqTSL2561();escribirTSL2561();break;
+          default:Serial.println("Comando erroneo! ");
+        }          
     comenzarEscucha();
   }
  else {
@@ -142,6 +126,12 @@ void loop() {
     delay(1000);
 
 }
+
+
+
+
+
+
 
 
 //~~~~~~~~~~~~~~~~~~~Funciones prototipadas~~~~~~~~~~~~~~~~~~~~~
@@ -162,7 +152,6 @@ void configureSensorTSL2561(void) {
 }
 void AdqTSL2561(){
   if(sensors_status[0]==1){
-  
   sensors_event_t event; /*Obtener un nuevo evento de sensor */ 
   tsl.getEvent(&event);
   TSL2561 = event.light;/*Muestra el resultado de la luz meduda en lux*/
