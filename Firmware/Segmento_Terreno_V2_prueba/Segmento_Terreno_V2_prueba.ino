@@ -11,19 +11,19 @@
 #define CSN_PIN 8                                    //Definicion del pin CSN para el RF24
 
 //Comandos
-#define ComandoLink    'c'//probar si esta disponible el sate
-#define ComandoAdq     'a'//Realizar adquisicion
-#define ComandoWrite   'w'//Escribir dato
-#define ComandoIMU     'i'//pedir vector IMU
-#define ComandoBmp180  'p'//pedir Vector bmp180
-#define ComandoTSL2561 't'//pedir Valor  TSL2561
-#define ComandoNull    '0'
-#define StatusCom      'l'
-#define StatusWrite    'r'
-#define StatusAdq      'f'
-#define ComandoMenu    'm'
+#define ComandoLink    'c'              //probar si esta disponible el sate.
+#define ComandoAdq     'a'              //Realizar adquisicion.
+#define ComandoWrite   'w'              //Escribir dato.
+#define ComandoIMU     'i'              //pedir vector IMU.
+#define ComandoBmp180  'p'              //pedir Vector bmp180.
+#define ComandoTSL2561 't'              //pedir Valor  TSL2561.
+#define ComandoNull    '0'              //Borra el comando. 
+#define StatusCom      'l'              //Pregunta estado de comunicaccion.
+#define StatusWrite    'r'              //Verifica estado de escritura.
+#define StatusAdq      'f'              //Verifica estado de adquisicion.
+#define ComandoMenu    'm'              //Muestra nuevamente el menú.
 //~~~~~~~~~~~~~~~~~~~Inicializacion de modulos~~~~~~~~~~~~~~~~~~~~~
-RF24 radio(CE_PIN, CSN_PIN);// Configuracion de Hardware:Radio nRF24L01 en el bus SPI (pines 10, 11, 12, 13) mas pines 7 & 8
+RF24 radio(CE_PIN, CSN_PIN);            // Configuracion de Hardware:Radio nRF24L01 en el bus SPI (pines 10, 11, 12, 13) mas pines 7 & 8
 
 //~~~~~~~~~~~~~~~~~~~Variables Globales~~~~~~~~~~~~~~~~~~~~~
 char Comando='0'; // variable para toma de orden por teclado
@@ -36,16 +36,16 @@ double VectorBmp180[3];//0-T 1-P 2-A
 double TSL2561;
 
 //~~~~~~~~~~~~~~~~~~~Prototipado de Funciones~~~~~~~~~~~~~~~~~~~~~
-void menuSerie();
-void configRadio();
-void empezarEscucha();
-void detenerEscucha();
-void esperaRx(int Demora);
-void escribirDatos(int comando);
-int16_t leerDatosRf();
-void leerVectorIMU();
-void leerVectorBmp180();
-void leerValorTSL2561();
+void menuSerie();                           //Muestra el menu de opciones.
+void configRadio();                         //Configura el modulo de radio NRF.
+void empezarEscucha();                      //Empieza la escucha RF.(Para recepcion de datos seguir las 3 funciones en orden).(1)
+void esperaRx(int Demora);                  //Recibe los datos que se estan mandando. (2)
+void detenerEscucha();                      //Detiene la escucha de la comunicacion por RF. (3)
+void escribirDatos(int comando);            //Envia los datos por RF.
+int16_t leerDatosRf();                      //Decodifica los datos recividos por RF.
+void leerVectorIMU();                       //Decodifica los datos recividos por RF correspondienes a la IMU.
+void leerVectorBmp180();                    //Decodifica los datos recividos por RF correspondientes al Bmp180.
+void leerValorTSL2561();                    //Decodifica los datos recividos por RF correspondientes al TSL2561.
 
 
 
@@ -57,20 +57,11 @@ void setup() {
   
 }
 void loop() {
- 
-   while(true){
-   
     Comando = ComandoNull;    
     delay(100);     
-    Comando = (char)Serial.read();//tomo valor del teclado 
-    Serial.println("<Estacion> "+Comando);
-    if(Comando == ComandoAdq || Comando == ComandoLink || Comando == ComandoWrite || Comando == ComandoIMU || Comando == ComandoBmp180 || Comando == ComandoTSL2561){
-        break;  
-       }     
-   }                             
-   
+    while(Comando == ComandoNull)Comando = (char)Serial.read();//tomo valor del teclado 
+    Serial.println("<Estacion> "+Comando);                  
    data =0; 
-   
    switch (Comando) {
       
       case ComandoAdq://orden de Adquirir datos
@@ -81,9 +72,9 @@ void loop() {
           esperaRx(3000);//ESPERO RESPUESTA
           data = leerDatosRf();//tomo dato que llego
             if(data == StatusAdq){
-              Serial.println("<CorEsat> ADQ OK!!! -");
+              Serial.println("<CorEsat> Comando de adquisicion ejecutado correctamente.");
             }else{
-              Serial.println("<CorEsat> ADQ FAIL!!! - Intente nuevamente");
+              Serial.println("<CorEsat> Problemas al ejecutar comando - Intente nuevamente");
             }
         break;        
           
@@ -94,7 +85,7 @@ void loop() {
             empezarEscucha();  
             esperaRx(2000);//ESPERO RESPUESTA
             leerVectorBmp180();            
-            Serial.println("<CorEsat> Temperatura: " + String(VectorBmp180[0]) + "[°C], Presion:" + String(VectorBmp180[1]) + "[mbar], Altitud " + String(VectorBmp180[2]) + " [m]");                                                                                        
+            Serial.println("<CorEsat> \n Temperatura: " + String(VectorBmp180[0]) + "[°C], Presion:" + String(VectorBmp180[1]) + "[mbar], Altitud " + String(VectorBmp180[2]) + " [m]");                                                                                        
           break;
           
         case ComandoIMU://Pedido vector Sensor IMU
@@ -116,10 +107,8 @@ void loop() {
             empezarEscucha();  
             esperaRx(2000);//ESPERO RESPUESTA
             leerValorTSL2561();            
-            Serial.println("<CorEsat> Ilumninacion: " + String(TSL2561) + " Lux");
-            
+            Serial.println("<CorEsat> \n Ilumninacion: " + String(TSL2561) + " Lux");            
           break;
-        
         case ComandoLink://verificacion de conexion con sate
           
           detenerEscucha();//DETENGO LA ESCUCHA
@@ -128,9 +117,9 @@ void loop() {
           esperaRx(2000);//ESPERO RESPUESTA
           data = leerDatosRf();//tomo dato que llego
             if(data == StatusCom){
-              Serial.println("<CorEsat> ACTIVO LINK OK!!!- ");
+              Serial.println("<CorEsat> Estado de conexion correcta. ");
             }else{
-              Serial.println("<CorEsat> INACTIVO LINK FAIL!!!- Intente nuevamente ");
+              Serial.println("** Conexion inactiva- Intente nuevamente ");
             }
           
         break;
@@ -142,14 +131,14 @@ void loop() {
           esperaRx(2000);//ESPERO RESPUESTA
           data = leerDatosRf();//tomo dato que llego          
             if(data == StatusWrite){
-              Serial.println("<CorEsat> WRITE OK!!! ");
+              Serial.println("<CorEsat> Estado de conexion correcta.");
             }else{
-              Serial.println("<CorEsat> WRITE FAIL!!! - Intente nuevamente ");
+              Serial.println("** Problemas en la transmicion - Intente nuevamente ");
             }         
         break;
       case ComandoMenu:menuSerie();break;
       default:
-       Serial.println("** Comando incorrecto - MOC de CORESat");
+       Serial.println("** Comando incorrecto.");
         break;
   }
   
@@ -172,66 +161,53 @@ void menuSerie(){
 
 void configRadio(){
    // Initiate the radio object
-  radio.begin();
+  radio.begin();//Inicializar objeto radio
   // Set the transmit power to lowest available to prevent power supply related issues
-  radio.setPALevel(RF24_PA_MIN);
+  radio.setPALevel(RF24_PA_MIN);// Configurar minima enercia de transmicion disponible.
   // Set the speed of the transmission to the quickest available
-  radio.setDataRate(RF24_2MBPS);
+  radio.setDataRate(RF24_2MBPS);//Configurar velocidad de transmicion maxima disponible.
   // Use a channel unlikely to be used by Wifi, Microwave ovens etc
-  radio.setChannel(124);
+  radio.setChannel(124);//Usar canal distinto la usado por el wifi, microondas ,etc.
   // Open a writing and reading pipe on each radio, with opposite addresses
-  radio.openWritingPipe(addresses[1]);
+  radio.openWritingPipe(addresses[1]);//Abrir escritura y lectura pipe en la radio , con direcciones distintas.
   radio.openReadingPipe(1, addresses[0]);
 }
 void empezarEscucha(){
-    // Now listen for a response
   radio.startListening();
 }
 
 void detenerEscucha(){
-  // Ensure we have stopped listening (even if we're not) or we won't be able to transmit
   radio.stopListening(); 
 }
 
 void esperaRx(int Demora){
-    // But we won't listen for long, 200 milliseconds is enough
   unsigned long started_waiting_at = millis();
-
-  // Loop here until we get indication that some data is ready for us to read (or we time out)
   while ( ! radio.available() ) {
-
-    // Oh dear, no response received within our timescale
     if (millis() - started_waiting_at > Demora ) {
-      Serial.println("No response received - timeout!");
+      Serial.println("**No hay respuesta del receptor - error: timeout.");
       return;
     }
   }
 }
 
 void escribirDatos(int comando){
-  // Did we manage to SUCCESSFULLY transmit that (by getting an acknowledgement back from the other Arduino)?
-  // Even we didn't we'll continue with the sketch, you never know, the radio fairies may help us   
     int data = comando;  
     if (!radio.write( &data, sizeof(unsigned int) )) {
-      Serial.println("No acknowledgement of transmission - receiving radio device connected?");    
+      Serial.println("**No se puedo transmitir informacion, Verifique la conexion del transmisor.");    
     }     
 }
 int16_t leerDatosRf(){
-  // Now read the data that is waiting for us in the nRF24L01's buffer  
   int16_t  dataRx=0;
   radio.read( &dataRx, sizeof(unsigned char) ); 
   return dataRx;
 }
 
-void leerVectorIMU(){
-  // Now read the data that is waiting for us in the nRF24L01's buffer   
+void leerVectorIMU(){  
   radio.read( &IMU, sizeof(IMU) );   
 }
-void leerVectorBmp180(){
-  // Now read the data that is waiting for us in the nRF24L01's buffer   
+void leerVectorBmp180(){  
   radio.read( &VectorBmp180, sizeof(VectorBmp180) );   
 }
-void leerValorTSL2561(){
-  // Now read the data that is waiting for us in the nRF24L01's buffer   
+void leerValorTSL2561(){  
   radio.read( &TSL2561, sizeof(float) );   
 }
