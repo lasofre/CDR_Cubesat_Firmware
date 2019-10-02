@@ -1,5 +1,8 @@
 /*Proyecto: CorEsat
- * 
+ *Segmento: Estacion Terrena.
+ *Creado por el grupo CorEsat del club de robotica de la 
+ *Universidad tecnologica nacional Facultad regional Cordoba, Argentina.
+ *Web: https://clubderobotica.github.io/
  */
 #include <SFE_BMP180.h>
 #include <Adafruit_Sensor.h>
@@ -26,9 +29,10 @@
 #define ComandoBmp180  'p'                          //pedir Vector bmp180
 #define ComandoTSL2561 't'                          //pedir Valor  TSL2561
 #define ComandoNull    '0'
-#define StatusCom     'l'
-#define StatusWrite   'r'
-#define StatusAdq     'f'
+#define StatusCom      'l'
+#define StatusWrite    'r'
+#define StatusAdq      'f'
+#define StatusSen      'j'
 
 
 //~~~~~~~~~~~~~~~~~~~Inicializacion de modulos~~~~~~~~~~~~~~~~~~~~~
@@ -117,6 +121,7 @@ void loop() {
           case ComandoIMU:    AdqImu();escribirVectorIMU();break;
           case ComandoBmp180: AdqBmp180();escribirVectorBpm180();break;
           case ComandoTSL2561:AdqTSL2561();escribirTSL2561();break;
+          case StatusCom:escribirEstadodesensores();break;
           default:Serial.println("Comando erroneo! ");
         }          
     comenzarEscucha();

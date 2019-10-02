@@ -1,8 +1,5 @@
 /*Proyecto: CorEsat
- *Segmento: Estacion Terrena.
- *Creado por el grupo CorEsat del club de robotica de la 
- *Universidad tecnologica nacional Facultad regional Cordoba, Argentina.
- *Web: https://clubderobotica.github.io/
+ *Segmento: Estacion Terrena
  */
 #include "Arduino.h"
 #include <SPI.h>
@@ -25,7 +22,6 @@
 #define StatusWrite    'r'              //Verifica estado de escritura.
 #define StatusAdq      'f'              //Verifica estado de adquisicion.
 #define ComandoMenu    'm'              //Muestra nuevamente el menú.
-#define StatusSen      'j'              //Pide el estado de los sensores vector (0:TSL2561|1:Bmp180|2:MPU-9250) 1 configurado,0 desconfigurado
 //~~~~~~~~~~~~~~~~~~~Inicializacion de modulos~~~~~~~~~~~~~~~~~~~~~
 RF24 radio(CE_PIN, CSN_PIN);            // Configuracion de Hardware:Radio nRF24L01 en el bus SPI (pines 10, 11, 12, 13) mas pines 7 & 8
 
@@ -38,7 +34,7 @@ byte i;
 double IMU[9];
 double VectorBmp180[3];//0-T 1-P 2-A
 double TSL2561;
-char sensors_status[3]={'\0'};  
+
 //~~~~~~~~~~~~~~~~~~~Prototipado de Funciones~~~~~~~~~~~~~~~~~~~~~
 void menuSerie();                           //Muestra el menu de opciones.
 void configRadio();                         //Configura el modulo de radio NRF.
@@ -128,6 +124,7 @@ void loop() {
           
         break;
       case ComandoWrite://escritura de datos hacia el satelite
+          
           detenerEscucha();//DETENGO LA ESCUCHA
           escribirDatos(ComandoWrite);//ENVIO SOLICITUD DE A 1 DATO
           empezarEscucha();  
@@ -139,13 +136,6 @@ void loop() {
               Serial.println("** Problemas en la transmicion - Intente nuevamente ");
             }         
         break;
-      case StatusSen:
-          detenerEscucha();//DETENGO LA ESCUCHA
-          escribirDatos(StatusSen);//ENVIO SOLICITUD DE A 1 DATO
-          empezarEscucha();  
-          esperaRx(2000);//ESPERO RESPUESTA
-          leersensorStatus();
-         Serial.println("<CorEsat> Estado de Sensores:"+String(sensors_status));    
       case ComandoMenu:menuSerie();break;
       default:
        Serial.println("** Comando incorrecto.");
@@ -220,7 +210,4 @@ void leerVectorBmp180(){
 }
 void leerValorTSL2561(){  
   radio.read( &TSL2561, sizeof(float) );   
-}
-void leersensorStatus(){  
-  radio.read( &sensors_status, sizeof(sensors_status) );   
 }
