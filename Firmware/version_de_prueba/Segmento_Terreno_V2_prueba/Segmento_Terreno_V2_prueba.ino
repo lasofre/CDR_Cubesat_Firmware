@@ -67,13 +67,11 @@ void loop() {
     while(Comand[0] = ComandoNull){
     if (Serial.available()){
     Comand=Serial.readString();
-    //Comando = (char)comando;//tomo valor del teclado
     Serial.println("<Estacion> "+String(Comand[0]));
     break;
     } 
     }             
-   switch (Comand[0]) {
-      
+   switch (Comand[0]) {    
       case ComandoAdq://orden de Adquirir datos
         
           detenerEscucha();//DETENGO LA ESCUCHA

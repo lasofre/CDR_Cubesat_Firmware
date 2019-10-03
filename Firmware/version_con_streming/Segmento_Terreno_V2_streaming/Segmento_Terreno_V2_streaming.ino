@@ -30,7 +30,7 @@
 RF24 radio(CE_PIN, CSN_PIN);            // Configuracion de Hardware:Radio nRF24L01 en el bus SPI (pines 10, 11, 12, 13) mas pines 7 & 8
 
 //~~~~~~~~~~~~~~~~~~~Variables Globales~~~~~~~~~~~~~~~~~~~~~
-char Comando='0'; // variable para toma de orden por teclado
+String Comand; // variable para toma de orden por teclado
 int  esperaRespuesta; 
 byte addresses[][6] = {"1Node", "2Node"};
 int data = 0;//para pedir datos de 1 a 20
@@ -38,7 +38,8 @@ byte i;
 double IMU[9];
 double VectorBmp180[3];//0-T 1-P 2-A
 double TSL2561;
-char sensors_status[3]={'\0'};  
+bool sensors_status[3]={'\0'};
+
 //~~~~~~~~~~~~~~~~~~~Prototipado de Funciones~~~~~~~~~~~~~~~~~~~~~
 void menuSerie();                           //Muestra el menu de opciones.
 void configRadio();                         //Configura el modulo de radio NRF.
@@ -56,18 +57,14 @@ void leerValorTSL2561();                    //Decodifica los datos recividos por
 //~~~~~~~~~~~~~~~~~~~Funciones Propias de Arduino~~~~~~~~~~~~~~~~~~~~~
 void setup() {
   Serial.begin(9600); 
-  menuSerie();
+  //menuSerie();
   configRadio();
   
 }
 void loop() {
-    Comando = ComandoNull;    
-    delay(100);     
-    while(Comando == ComandoNull)Comando = (char)Serial.read();//tomo valor del teclado 
-    Serial.println("<Estacion> "+Comando);                  
-   data =0; 
-   switch (Comando) {
-      
+    Comand =String("i\n");//Letra correspondiente con el sensor a medir (Ver menú)
+    data =0;              
+   switch (Comand[0]) {    
       case ComandoAdq://orden de Adquirir datos
         
           detenerEscucha();//DETENGO LA ESCUCHA
@@ -88,21 +85,26 @@ void loop() {
             escribirDatos(ComandoBmp180);
             empezarEscucha();  
             esperaRx(2000);//ESPERO RESPUESTA
-            leerVectorBmp180();            
-            Serial.println("<CorEsat> \n Temperatura: " + String(VectorBmp180[0]) + "[°C], Presion:" + String(VectorBmp180[1]) + "[mbar], Altitud " + String(VectorBmp180[2]) + " [m]");                                                                                        
+            leerVectorBmp180();
+            Serial.println(VectorBmp180[0]);//Corresponde a lo que se quiere graficar por ejempl reeemplazar VectorBmp180[0] por VectorBmp180[1]
+                                            //Si se quiere graficar presion            
+            //Serial.println("<CorEsat> \n Temperatura: " + String(VectorBmp180[0]) + "[°C], Presion:" + String(VectorBmp180[1]) + "[mbar], Altitud " + String(VectorBmp180[2]) + " [m]");                                                                                        
           break;
           
         case ComandoIMU://Pedido vector Sensor IMU
-            
             detenerEscucha();//DETENGO LA ESCUCHA
             escribirDatos(ComandoIMU);//ENVIO pedido de vector IMU
             empezarEscucha();  
             esperaRx(2000);//ESPERO RESPUESTA
             leerVectorIMU();
-            Serial.println("<CorEsat>");
-            Serial.println("Accel: " + String(IMU[0]) + ", " + String(IMU[1]) + ", " + String(IMU[2]) + " g");
-            Serial.println("Gyro: " + String(IMU[3]) + ", " + String(IMU[4]) + ", " + String(IMU[5]) + " dps");
-            Serial.println("Mag: " + String(IMU[6]) + ", " + String(IMU[7]) + ", " + String(IMU[8]) + " uT");                        
+            Serial.print(IMU[3]);//gyro IMU[3]    mag IMU[6]
+            Serial.print("\t");
+            Serial.print(IMU[4]);//gyro IMU[4]  mag IMU[7]
+            Serial.print("\t");
+            Serial.println(IMU[5]);//gyro IMU[5]  mag IMU[8]
+            //Serial.println("Accel: " + String(IMU[0]) + ", " + String(IMU[1]) + ", " + String(IMU[2]) + " g");
+            //Serial.println("Gyro: " + String(IMU[3]) + ", " + String(IMU[4]) + ", " + String(IMU[5]) + " dps");
+            //Serial.println("Mag: " + String(IMU[6]) + ", " + String(IMU[7]) + ", " + String(IMU[8]) + " uT");                        
           break;
         case ComandoTSL2561://Pedido valor Sensor Lux
             
@@ -145,10 +147,10 @@ void loop() {
           empezarEscucha();  
           esperaRx(2000);//ESPERO RESPUESTA
           leersensorStatus();
-         Serial.println("<CorEsat> Estado de Sensores:"+String(sensors_status));    
-      case ComandoMenu:menuSerie();break;
+         Serial.println("<CorEsat> Estado de Sensores:"+String(sensors_status[0])+String(sensors_status[1])+String(sensors_status[2]));break;
+      case ComandoMenu:menuSerie();Comand[0] = ComandoNull;break;
       default:
-       Serial.println("** Comando incorrecto.");
+       //Serial.println("** Comando incorrecto.");
         break;
   }
   
