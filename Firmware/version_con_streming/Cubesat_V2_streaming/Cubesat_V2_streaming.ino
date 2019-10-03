@@ -1,5 +1,5 @@
 /*Proyecto: CorEsat
- *Segmento: Estacion Terrena.
+ *Segmento: Satelite.
  *Creado por el grupo CorEsat del club de robotica de la 
  *Universidad tecnologica nacional Facultad regional Cordoba, Argentina.
  *Web: https://clubderobotica.github.io/
