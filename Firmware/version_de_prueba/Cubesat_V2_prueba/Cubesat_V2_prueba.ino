@@ -41,7 +41,6 @@ MPU9250_DMP imu;                                    //SDA - Pin A4 SCL - Pin A5
 RF24 radio(CE_PIN, CSN_PIN);                        // Hardware configuration: Set up nRF24L01 radio on SPI bus (pins 10, 11, 12, 13) plus pins 7 & 8
 SFE_BMP180 bmp180; 
 //~~~~~~~~~~~~~~~~~~~Variables Globales~~~~~~~~~~~~~~~~~~~~~
-
 byte addresses[][6] = {"1Node","2Node"};
 double IMU[9]={0};                                     //vector para imu
 double VectorBmp180[3]={0};                            //0-T 1-P 2-A (vector para BMP180)
@@ -50,6 +49,7 @@ float LED1;
 float LED2;
 float LED3;
 float PresionNivelMar = 1013.25;                   //presion sobre el nivel del mar en mbar
+
 bool sensors_status[3]={0};                         // 0 no se configuró correctamente , 1 se configuró correctamente
                                                     //Vector sensors_status|0:TSL2561|1:Bmp180|2:MPU-9250
 //~~~~~~~~~~~~~~~~~~~Prototipado de Funciones~~~~~~~~~~~~~~~~~~~~~
@@ -123,13 +123,13 @@ void loop() {
           case ComandoTSL2561:AdqTSL2561();escribirTSL2561();break;
           case StatusSen:escribirEstadodesensores();break;
           default:Serial.println("Comando erroneo! ");
-        }
-      comenzarEscucha();          
-      }
+        }          
+    comenzarEscucha();
+  }
  else {
     digitalWrite(LEDTX, LOW);}
     delay(1000);
-   
+
 }
 
 
