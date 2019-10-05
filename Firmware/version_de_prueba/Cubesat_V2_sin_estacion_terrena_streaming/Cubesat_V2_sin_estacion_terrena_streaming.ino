@@ -22,13 +22,13 @@
 #define CE_PIN 7                                     //Definicion del pin CE para el RF24
 #define CSN_PIN 8                                    //Definicion del pin CSN para el RF24
 //Comandos
-#define ComandoIMU     'i'              //pedir vector IMU.
-#define ComandoBmp180  'p'              //pedir Vector bmp180.
-#define ComandoTSL2561 't'              //pedir Valor  TSL2561.
-#define ComandoNull    '0'              //Borra el comando. 
-#define ComandoMenu    'm'              //Muestra nuevamente el menú.
-#define StatusSen      'j'              //Pide el estado de los sensores vector (0:TSL2561|1:Bmp180|2:MPU-9250) 1 configurado,0 desconfigurado
-
+#define ComandoAcel    'a'              //Setream Aceleración.
+#define ComandoGiro    'g'              //Setream Giroscopio.
+#define ComandoMag     'm'              //Setream Magnetometro.
+#define ComandoTemp    't'              //Setream Temperatura.
+#define ComandoPres    'p'              //Setream Presion.
+#define ComandoAltitud 'l'              //Setream Altitud.
+#define ComandoIlumin  'i'              //Setream Iluminación.
 //~~~~~~~~~~~~~~~~~~~Inicializacion de modulos~~~~~~~~~~~~~~~~~~~~~
 Adafruit_TSL2561_Unified tsl = Adafruit_TSL2561_Unified(TSL2561_ADDR_FLOAT, 12345);
 MPU9250_DMP imu;                                    //SDA - Pin A4 SCL - Pin A5
@@ -96,39 +96,34 @@ delay(200);
   configSerie();
   configRadio();
   configureSensorTSL2561();  
-  menuSerie();
+
 
   
 }
 void loop() {
  int data=0;
- Comand[0] = ComandoNull;  
+ Comand =String("i\n");//Letra correspondiente con el sensor a medir (Ver menú) en este caso como tiene la i se queda graficando
+                       //Iluminación. 
  AdqBmp180(); 
  LEDs();
-  while(Comand[0] = ComandoNull){
-    if (Serial.available()){
-    Comand=Serial.readString();
-    Serial.println("<Estacion> "+String(Comand[0]));
-    break;
-      } 
-  }  
-        switch(Comand[0]){
-          case StatusSen:
-          Serial.println(sensors_status);
+   switch(Comand[0]){
+          case ComandoAcel:AdqImu();
+          Serial.println(String(IMU[0])+" " + String(IMU[1])+" " +String(IMU[2]));break;
+          case ComandoGiro:AdqImu();
+          Serial.println(String(IMU[3])+" " + String(IMU[4])+" " +String(IMU[5]));break;
+          case ComandoMag:AdqImu();
+          Serial.println(String(IMU[6])+" " + String(IMU[7])+" " +String(IMU[8]));break;                     
+          case ComandoTemp: AdqBmp180();
+          Serial.println(String(VectorBmp180[0])); 
           break;
-          case ComandoIMU:    AdqImu();
-          Serial.println("Accel: " + String(IMU[0]) + ", " + String(IMU[1]) + ", " + String(IMU[2]) + " g");
-          Serial.println("Gyro: " + String(IMU[3]) + ", " + String(IMU[4]) + ", " + String(IMU[5]) + " dps");
-          Serial.println("Mag: " + String(IMU[6]) + ", " + String(IMU[7]) + ", " + String(IMU[8]) + " uT");                        
+          case ComandoPres: AdqBmp180();
+          Serial.println(String(VectorBmp180[1])); 
           break;
-          case ComandoBmp180: AdqBmp180();escribirVectorBpm180();
-          Serial.println("Temperatura: " + String(VectorBmp180[0]) + "[°C], Presion:" + String(VectorBmp180[1]) + "[mbar], Altitud " + String(VectorBmp180[2]) + " [m]"); 
+          case ComandoAltitud: AdqBmp180();
+          Serial.println(String(VectorBmp180[2])); 
           break;
-          case ComandoTSL2561:AdqTSL2561();
-          Serial.println("Ilumninacion: " + String(TSL2561) + " Lux");            
-          break;
-          case ComandoMenu:
-          menuSerie();
+          case ComandoIlumin:AdqTSL2561();
+          Serial.println(String(TSL2561));         
           break;
           default:Serial.println("Comando erroneo! ");
         }          
@@ -149,7 +144,7 @@ void configureSensorTSL2561(void) {
    /* Initialise the sensor */
   if(!tsl.begin())
   {
-    Serial.print("**TSL2561 no detectado");
+    sensors_status[0]='0';
   }
   else{
     sensors_status[0]='1';
@@ -205,8 +200,7 @@ void escribirVectorBpm180(){
 }
 void configIMU(){
   if (imu.begin() != INV_SUCCESS)  {
-          sensors_status[2]='0';
-           delay(100);
+           sensors_status[2]='0';
   } 
   else{
   sensors_status[2]='1';
