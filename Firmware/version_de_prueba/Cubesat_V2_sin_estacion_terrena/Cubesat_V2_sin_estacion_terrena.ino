@@ -22,18 +22,12 @@
 #define CE_PIN 7                                     //Definicion del pin CE para el RF24
 #define CSN_PIN 8                                    //Definicion del pin CSN para el RF24
 //Comandos
-#define ComandoLink    'c'
-#define ComandoStatus  's'
-#define ComandoWrite   'w'
-#define ComandoIMU     'i'                          //pedir vector IMU
-#define ComandoBmp180  'p'                          //pedir Vector bmp180
-#define ComandoTSL2561 't'                          //pedir Valor  TSL2561
-#define ComandoNull    '0'
-#define StatusCom      'l'
-#define StatusWrite    'r'
-#define StatusAdq      'f'
-#define StatusSen      'j'
-
+#define ComandoIMU     'i'              //pedir vector IMU.
+#define ComandoBmp180  'p'              //pedir Vector bmp180.
+#define ComandoTSL2561 't'              //pedir Valor  TSL2561.
+#define ComandoNull    '0'              //Borra el comando. 
+#define ComandoMenu    'm'              //Muestra nuevamente el menú.
+#define StatusSen      'j'              //Pide el estado de los sensores vector (0:TSL2561|1:Bmp180|2:MPU-9250) 1 configurado,0 desconfigurado
 
 //~~~~~~~~~~~~~~~~~~~Inicializacion de modulos~~~~~~~~~~~~~~~~~~~~~
 Adafruit_TSL2561_Unified tsl = Adafruit_TSL2561_Unified(TSL2561_ADDR_FLOAT, 12345);
@@ -49,8 +43,8 @@ float LED1;
 float LED2;
 float LED3;
 float PresionNivelMar = 1013.25;                   //presion sobre el nivel del mar en mbar
-
-char sensors_status[3]={0};                         // 0 no se configuró correctamente , 1 se configuró correctamente
+String Comand;
+char sensors_status[3]={'0'};                         // 0 no se configuró correctamente , 1 se configuró correctamente
                                                     //Vector sensors_status|0:TSL2561|1:Bmp180|2:MPU-9250
 //~~~~~~~~~~~~~~~~~~~Prototipado de Funciones~~~~~~~~~~~~~~~~~~~~~
 void configureSensorTSL2561(void);                //Configura el sensor de luz.
@@ -106,24 +100,23 @@ delay(200);
 
   
 }
-void loop() {  
+void loop() {
+ int data=0;
+ Comand[0] = ComandoNull;  
  AdqBmp180(); 
  LEDs();
-  // SI SE RECIBE UN COMANDO... 
-  if ( radio.available()) {
-     digitalWrite(LEDTX,HIGH); //ENCIENDE LED CADA VEZ QUE SE ENVIA UN DATO O SE RECIBE UN COMANDO.
-    int data=0;
-    data = leerDato(); // 
-    detenerEscucha();
-    Serial.println(data);
-        switch(data){
-          case ComandoStatus: escribirEstadodesensores();
+  while(Comand[0] = ComandoNull){
+    if (Serial.available()){
+    Comand=Serial.readString();
+    Serial.println("<Estacion> "+String(Comand[0]));
+    break;
+      } 
+  }  
+        switch(Comand[0]){
+          case StatusSen:
           Serial.println(sensors_status);
           break;
-          case ComandoLink:   escribirDato(StatusCom);
-          Serial.println(StatusCom);
-          break;
-          case ComandoIMU:    AdqImu();escribirVectorIMU();
+          case ComandoIMU:    AdqImu();
           Serial.println("Accel: " + String(IMU[0]) + ", " + String(IMU[1]) + ", " + String(IMU[2]) + " g");
           Serial.println("Gyro: " + String(IMU[3]) + ", " + String(IMU[4]) + ", " + String(IMU[5]) + " dps");
           Serial.println("Mag: " + String(IMU[6]) + ", " + String(IMU[7]) + ", " + String(IMU[8]) + " uT");                        
@@ -131,17 +124,12 @@ void loop() {
           case ComandoBmp180: AdqBmp180();escribirVectorBpm180();
           Serial.println("Temperatura: " + String(VectorBmp180[0]) + "[°C], Presion:" + String(VectorBmp180[1]) + "[mbar], Altitud " + String(VectorBmp180[2]) + " [m]"); 
           break;
-          case ComandoTSL2561:AdqTSL2561();escribirTSL2561();
+          case ComandoTSL2561:AdqTSL2561();
           Serial.println("Ilumninacion: " + String(TSL2561) + " Lux");            
           break;
-          case StatusSen:escribirEstadodesensores();break;
           default:Serial.println("Comando erroneo! ");
         }          
-    comenzarEscucha();
-  }
- else {
-    digitalWrite(LEDTX, LOW);}
-    delay(1000);
+
 
 }
 
@@ -162,14 +150,14 @@ void configureSensorTSL2561(void) {
   }
   else{
     Serial.println(">TSL2561 iniciado");
-    sensors_status[0]=1;
+    sensors_status[0]='1';
     tsl.enableAutoRange(true);            /* Auto-gain ... switches automatically between 1x and 16x */
     tsl.setIntegrationTime(TSL2561_INTEGRATIONTIME_13MS);      /* fast but low resolution */
   }
 
 }
 void AdqTSL2561(){
-  if(sensors_status[0]==1){
+  if(sensors_status[0]=='1'){
   sensors_event_t event; /*Obtener un nuevo evento de sensor */ 
   tsl.getEvent(&event);
   TSL2561 = event.light;/*Muestra el resultado de la luz meduda en lux*/
@@ -179,7 +167,7 @@ void AdqTSL2561(){
 void configBmp180(){
     if (bmp180.begin()){
       Serial.println(">BMP180 iniciado");
-      sensors_status[1]==1;
+      sensors_status[1]='1';
     } else  {
       Serial.println("**Error al iniciar el BMP180");
     }
@@ -220,7 +208,7 @@ void configIMU(){
            delay(100);
   } 
   else{
-  sensors_status[2]==1;
+  sensors_status[2]='1';
   Serial.println(">MPU-9250 iniciado");
   imu.setSensors(INV_XYZ_GYRO | INV_XYZ_ACCEL | INV_XYZ_COMPASS);
   imu.setGyroFSR(250); // Set gyro to 2000 dps
@@ -318,4 +306,12 @@ void LEDs(){
 }
 void escribirEstadodesensores(){
   radio.write(&sensors_status, sizeof(sensors_status)); 
+}
+void menuSerie(){
+  Serial.println("MOC de CORESat.");
+  Serial.println("(m) menu.");
+  Serial.println("(j) Estado de los sensores.");  
+  Serial.println("(i) Datos IMU.");
+  Serial.println("(p) Datos TPA.");
+  Serial.println("(t) Datos Lux.");   
 }
